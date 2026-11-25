@@ -42,3 +42,7 @@ apps/mobile/.flutter-plugins*
 
 # ---- 本地运行日志与会话临时产物（另一项目误输出于此，不入库）----
 .run-logs/
+
+# ---- 工具缓存（IDE changelist / Vite 依赖预构建）----
+.openidea/
+frontend/.vite/
