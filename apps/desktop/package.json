@@ -1,0 +1,13 @@
+{
+  "name": "zcadmin-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "卓才智能 桌面端（Tauri 2）",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

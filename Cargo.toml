@@ -1,0 +1,120 @@
+# =============================================================================
+# 工作区清单（Cargo Workspace）
+#
+# 结构约定：
+#   crates/kernel  —— 内核：插件契约、装配器、横切能力（不依赖任何插件）
+#   crates/xtask   —— 工程命令：verify / arch-check / new-plugin / doctor
+#   plugins/*      —— 业务插件：每个业务域一个 crate，实现 Plugin trait
+#   apps/server    —— 唯一可执行入口：加载配置、装配所有插件、启动 HTTP 服务
+#
+# 新增插件的唯一改动：
+#   1) plugins/ 下新建 crate
+#   2) 在 apps/server/Cargo.toml 的 [dependencies] 增加一行
+#   3) 插件内部用 inventory::submit! 注册，内核零改动
+# =============================================================================
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/kernel",
+    "crates/xtask",
+    # 通配符：新建的插件目录自动成为 workspace 成员，无需再改这里
+    "plugins/*",
+    "apps/server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Proprietary"
+
+[workspace.dependencies]
+# ---- 内部 crate ----
+kernel = { path = "crates/kernel" }
+plugin-demo = { path = "plugins/demo" }
+
+# ---- Web 框架与中间件 ----
+axum = { version = "0.8", features = ["macros", "multipart"] }
+# limit/load-shed：过载时快速失败（503），而不是让请求无限排队把内存吃光。
+tower = { version = "0.5", features = ["limit", "load-shed"] }
+tower-http = { version = "0.6", features = [
+    "fs",
+    "trace",
+    "timeout",
+    "cors",
+    "request-id",
+    "compression-gzip",
+] }
+tokio = { version = "1", features = ["full"] }
+
+# ---- 数据访问 ----
+# 说明：这里使用运行时查询（sqlx::query / query_as），编译时不要求连接数据库。
+#      正式业务模块推荐改用编译期校验的 query! 宏 + `cargo sqlx prepare` 离线缓存。
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "json",
+    "migrate",
+    "macros",
+] }
+
+# ---- 序列化 / 错误 / 日志 ----
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_html_form = "0.2"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
+
+# ---- Excel ----
+calamine = "0.37"
+rust_xlsxwriter = "0.102"
+
+# ---- 可观测 ----
+metrics = "0.24"
+opentelemetry = "0.33"
+opentelemetry_sdk = { version = "0.33", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.33", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.34"
+metrics-exporter-prometheus = "0.18"
+
+# ---- 认证与密码 ----
+argon2 = "0.5"
+sha2 = "0.10"
+hmac = "0.12"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+
+# ---- 接口契约（OpenAPI） ----
+utoipa = { version = "5", features = ["uuid", "chrono", "preserve_order"] }
+
+# ---- 工具 ----
+uuid = { version = "1", features = ["v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+inventory = "0.3"
+toml = "0.8"
+
+# =============================================================================
+# 开发构建优化：让 `cargo check` 尽量快（AI 迭代速度 = 反馈速度）
+# 依赖包（非本工作区）用 opt-level=2 编译，自身代码保持 0，兼顾运行与编译速度。
+# =============================================================================
+[profile.dev]
+opt-level = 0
+debug = 1            # 1 而不是 2：调试信息够用，链接更快
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+# 必须是 unwind：处理器里的 panic 由 CatchPanicLayer 转成 500。
+# 用 abort 会让「一个请求的空指针」变成「整个实例 + 所有 in-flight 请求一起死」。
+# 代价是二进制略大、panic 路径略慢，对管理后台可以忽略。
+panic = "unwind"

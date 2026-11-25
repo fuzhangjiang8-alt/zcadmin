@@ -1,0 +1,55 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "唯一可执行入口：装配内核与所有插件"
+
+[dependencies]
+kernel = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+
+# -----------------------------------------------------------------------------
+# 插件清单（编译期可插拔：通过 Cargo features 按客户/内部系统裁剪二进制）
+#
+# 默认启用全部插件；内部系统不需要某模块时可编译期裁剪：
+#   cargo build --release -p server --no-default-features --features "plugin-crm"
+# 或在运行期通过 DISABLED_PLUGINS=workflow,demo 动态禁用。
+# 链接器会丢弃未被引用的 crate，因此 main.rs 配合 #[cfg(feature = "...")] 显式链接。
+# -----------------------------------------------------------------------------
+plugin-demo = { workspace = true, optional = true }
+plugin-crm = { path = "../../plugins/crm", optional = true }
+plugin-workflow = { path = "../../plugins/workflow", optional = true }
+
+[features]
+default = ["plugin-demo", "plugin-crm", "plugin-workflow"]
+plugin-demo = ["dep:plugin-demo"]
+plugin-crm = ["dep:plugin-crm"]
+plugin-workflow = ["dep:plugin-workflow"]
+
+[dev-dependencies]
+# 集成测试用：Router::oneshot 直接调用，不经过 TCP
+tower = { version = "0.5", features = ["util"] }
+# 安全基线测试需要复现 app.rs 里的 panic 隔离层（非新增依赖，版本由工作区统一管理）
+tower-http = { workspace = true }
+# 冒烟测试需要直接操作数据库（解锁用户等）
+sqlx = { workspace = true }
+uuid = { workspace = true }
+# 冒烟测试需要构造导入用的 xlsx
+rust_xlsxwriter = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+# 测试二进制同样需要显式引用插件，否则链接器会丢弃（与 main.rs 同理）
+plugin-demo = { workspace = true }
+plugin-crm = { path = "../../plugins/crm" }
+

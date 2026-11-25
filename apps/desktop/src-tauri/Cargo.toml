@@ -1,0 +1,14 @@
+[package]
+name = "zcadmin-desktop"
+version = "0.1.0"
+edition = "2021"
+description = "zcadmin 桌面端外壳（复用 Web 前端）"
+
+# 独立工作区：Tauri 依赖树大，不拖慢主仓库的 fmt/clippy/test
+[workspace]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

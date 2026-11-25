@@ -1,0 +1,104 @@
+# =============================================================================
+# 应用配置（本地开发默认值）
+#
+# 优先级：代码默认值 < 本文件 < 环境变量
+# 生产环境请勿修改本文件，用环境变量覆盖（DATABASE_URL / BIND_ADDR / ...）
+# 本配置模块解析的环境变量格式错误会中止启动；布尔值支持 true/false、1/0、yes/no。
+# 超时约束：REQUEST_TIMEOUT_SECS 必须分别大于 DB_ACQUIRE_TIMEOUT_SECS 和 STATEMENT_TIMEOUT_SECS，且 SQL 超时不能为 0。
+# 完整部署变量及回归命令见 docs/基础功能分析与加固-2026-11-10.md。
+# =============================================================================
+
+[server]
+# 监听地址。容器内用 0.0.0.0，本机调试可改 127.0.0.1:8080
+bind = "0.0.0.0:8080"
+
+# 允许跨域的前端源（开发环境是 Vite 默认端口）
+# 注意：开启 Cookie 后不能用 "*"，必须是显式白名单
+cors_origins = ["http://localhost:5173"]
+
+# 前端构建产物目录（存在时由后端托管 SPA；纯 API 模式可忽略）
+web_dist = "frontend/dist"
+
+# 单次请求超时（秒），环境变量 REQUEST_TIMEOUT_SECS；应小于网关超时
+request_timeout_secs = 30
+
+# 同时处理中的请求上限。0 = 按 CPU 核数推导（核数 × 8，至少 32）。
+# 超过上限的请求立即返回 503，而不是排队：排队会把内存和尾延迟一起拖垮。
+max_concurrency = 0
+
+# 可信反向代理 CIDR 列表（如 ["10.0.0.0/8"]）。
+# 为空 = 不信任任何代理，客户端 IP 一律取 TCP 对端地址（安全默认值）。
+# 部署在 Nginx / 云负载均衡之后时**必须**配置，否则审计与限流记到的是代理 IP。
+trusted_proxies = []
+
+# 优雅停机的排空上限（秒）。必须小于编排系统的 stop_grace_period。
+shutdown_grace_secs = 20
+
+[database]
+# 本地开发连接串。生产/容器请用 zcadmin_app（NOSUPERUSER NOBYPASSRLS），
+# 超级用户会让 FORCE ROW LEVEL SECURITY 失效（见 ops/init-app-role.sql）。
+url = "postgres://zcadmin:zcadmin@localhost:5432/zcadmin"
+
+# 连接池上限。经验公式见 docs/03-数据架构.md 第 7 节
+max_connections = 20
+
+# 从池中取连接的超时（秒），环境变量 DB_ACQUIRE_TIMEOUT_SECS；池满时返回 503
+acquire_timeout_secs = 5
+
+# 单条 SQL 的服务端超时（秒），环境变量 STATEMENT_TIMEOUT_SECS，必须大于 0。
+# 客户端断连后 PostgreSQL 仍会继续执行，
+# 只有服务端超时才真正释放资源。必须小于 request_timeout_secs。
+statement_timeout_secs = 5
+
+# 连接最大存活时长（秒）。定期重建连接，避免故障切换/证书轮换后继续用旧连接。
+max_lifetime_secs = 1800
+
+# 预热的空闲连接数。启动后立即建连，避免首个请求撞上握手开销。
+min_connections = 5
+
+[auth]
+# 仅用于空库初始化；生产必须通过环境变量提供初始口令，已有账号不会被覆盖
+dev_username = "admin"
+dev_password = "admin123456"
+
+# 会话有效期（秒），默认 8 小时
+session_ttl_secs = 28800
+
+# 单端登录开关，环境变量 AUTH_SINGLE_SESSION；替换会话在同一事务中串行执行
+single_session = false
+
+# 连续登录失败 5 次锁定 15 分钟（防在线暴力破解）
+max_failed_attempts = 5
+lock_seconds = 900
+
+[storage]
+# 本地对象存储根目录（生产可换成挂载盘或改为 S3 实现）
+local_dir = "data/files"
+
+# 单文件大小上限（字节），默认 20MB
+max_file_bytes = 20971520
+
+[observability]
+# OTLP 端点；留空则只输出本地日志。
+# 本地起 Jaeger：docker run -p 4317:4317 -p 16686:16686 jaegertracing/all-in-one:latest
+# otlp_endpoint = "http://127.0.0.1:4317"
+
+# 链路采样比例（0.0~1.0）。默认 10%。
+# 1000 QPS 下全量采样会把 exporter 和追踪后端一起压垮。
+sample_ratio = 0.1
+
+[audit]
+# 审计日志保留天数（等保三级要求至少 6 个月）
+retention_days = 180
+
+[tenant]
+# 软删除租户保留天数，到期后由后台任务物理清理
+retention_days = 30
+# 账单逾期宽限天数
+bill_overdue_days = 30
+
+[plugins]
+# 按需禁用已编译进二进制的插件（可插拔控制，可用 DISABLED_PLUGINS=workflow,demo 覆盖）。
+# 被禁用的插件将跳过 schema 初始化、数据库迁移、权限与菜单同步以及路由挂载。
+disabled = []
+

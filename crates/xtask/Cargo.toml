@@ -1,0 +1,18 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "工程命令：verify / arch-check / new-plugin / doctor"
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+# 刻意不引入 clap / cargo_metadata：
+# 命令很少，手写参数解析足够；少一个依赖就少一处供应链风险。

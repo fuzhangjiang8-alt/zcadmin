@@ -1,0 +1,156 @@
+/* =============================================================================
+   全局基础样式与设计令牌
+   只放「重置 + 设计变量 + 全局皮肤微调」，组件样式一律写在组件内的 scoped style，
+   防止全局污染（这是多人/多插件协作的基本纪律）。
+   ========================================================================== */
+
+:root {
+  /* Design Token：品牌色（靛蓝系） */
+  --ad-color-primary: #6366f1;
+  --ad-color-primary-deep: #4f46e5;
+  --ad-color-bg: #f1f5f9;
+  --ad-color-text: #0f172a;
+  --ad-color-text-secondary: #64748b;
+
+  /* 侧边栏深色主题 */
+  --ad-sider-bg: #0f172a;
+  --ad-sider-item: #94a3b8;
+  --ad-sider-active: #eef2ff;
+
+  /* Design Token：间距（4px 栅格） */
+  --ad-space-sm: 8px;
+  --ad-space-md: 16px;
+  --ad-space-lg: 24px;
+
+  /* Design Token：圆角与阴影 */
+  --ad-radius-md: 10px;
+  --ad-shadow-card: 0 1px 2px rgb(15 23 42 / 4%), 0 4px 16px rgb(15 23 42 / 5%);
+  --ad-shadow-hover: 0 8px 24px rgb(15 23 42 / 10%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  color: var(--ad-color-text);
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgb(99 102 241 / 7%), transparent 60%),
+    var(--ad-color-bg);
+  /* 关闭移动端点击高亮，避免按钮闪烁 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #eef2ff;
+  color: var(--ad-color-primary-deep);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+}
+
+/* ---------- AntD 全局皮肤微调（轻量覆盖，不引入主题包） ---------- */
+
+/* 主色统一为品牌靛蓝 */
+.ant-btn-primary,
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--ad-color-primary);
+  border-color: var(--ad-color-primary);
+}
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--ad-color-primary-deep);
+  box-shadow: 0 4px 12px rgb(99 102 241 / 30%);
+}
+.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  background: var(--ad-color-primary);
+  border-color: var(--ad-color-primary);
+}
+.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
+  background: var(--ad-color-primary-deep);
+}
+.ant-menu-item-selected {
+  background: rgb(99 102 241 / 10%);
+}
+.ant-pagination-item-active {
+  border-color: var(--ad-color-primary);
+}
+.ant-pagination-item-active a {
+  color: var(--ad-color-primary);
+}
+.ant-switch-checked {
+  background: var(--ad-color-primary);
+}
+
+/* 卡片：统一圆角 + 柔影 + 悬浮反馈 */
+.ant-card {
+  border-radius: var(--ad-radius-md);
+  box-shadow: var(--ad-shadow-card);
+  border: 1px solid rgb(226 232 240 / 60%);
+  transition: box-shadow 0.25s ease;
+}
+.ant-card-head {
+  border-bottom: 1px solid #f1f5f9;
+  min-height: 48px;
+}
+.ant-card-head-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* 表格：表头浅底色 + 行悬浮 */
+.ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  font-weight: 600;
+  color: #334155;
+}
+.ant-table-tbody > tr:hover > td {
+  background: #f8faff !important;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 弹窗圆角 */
+.ant-modal-content,
+.ant-drawer-content {
+  border-radius: var(--ad-radius-md);
+}
+
+/* 页面入场动效：路由切换时内容轻微上浮淡入 */
+.content > * {
+  animation: page-in 0.25s ease;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

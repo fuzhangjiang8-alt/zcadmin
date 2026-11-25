@@ -1,0 +1,54 @@
+# =============================================================================
+# CRM 商机（opportunity）
+# 用法：cargo xtask gen schema/crm/opportunity.toml
+# =============================================================================
+
+[entity]
+plugin = "crm"
+table = "opportunity"
+name = "商机"
+route = "/opportunities"
+owner_field = "owner_id"
+dept_field = "dept_id"
+
+[[field]]
+name = "customer_id"
+type = "uuid"
+required = true
+list = true
+
+[[field]]
+name = "name"
+type = "string"
+length = 128
+required = true
+list = true
+search = "ct"
+
+# 金额统一用「分」存整数，避免浮点误差
+[[field]]
+name = "amount_cents"
+type = "int"
+list = true
+
+[[field]]
+name = "stage"
+type = "string"
+length = 32
+required = true
+list = true
+
+[[field]]
+name = "expected_close"
+type = "datetime"
+
+[[field]]
+name = "owner_id"
+type = "uuid"
+required = true
+auto = true
+
+[[field]]
+name = "dept_id"
+type = "uuid"
+auto = true

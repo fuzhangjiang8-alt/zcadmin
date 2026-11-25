@@ -1,0 +1,320 @@
+# =============================================================================
+# CI 流水线
+#
+# 设计原则：
+#   1. 与人/AI 本地执行的命令**完全一致**（cargo xtask verify），避免"本地过、CI 挂"
+#   2. 契约（openapi.json）变更必须显式提交，CI 只负责发现漂移
+#   3. 前端类型检查与构建分开跑，失败原因一眼可见
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 后端：格式 / lint / 测试 / 架构规则 / 契约一致性
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (Rust)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --all --check
+
+      - name: Data scope drift check
+        run: |
+          files=$(grep -rl "dept_and_child" crates plugins --include="*.rs" || true)
+          bad=""
+          for f in $files; do
+            if ! grep -q "custom" "$f" && ! grep -q "kernel::scope::condition" "$f"; then
+              bad="$bad $f"
+            fi
+          done
+          if [ -n "$bad" ]; then
+            echo "::error::以下文件包含 dept_and_child 但缺少 custom：$bad"
+            exit 1
+          fi
+
+      - name: Clippy (warnings as errors)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+      - name: Architecture rules
+        run: cargo xtask arch-check
+
+      - name: Tenant isolation (RLS policies must also FORCE)
+        # ENABLE 只约束普通角色；表 owner 仍可绕过。
+        # 这类缺口不会报错，只会静默跨租户泄漏，必须静态拦截。
+        run: node scripts/check-rls-coverage.mjs
+
+      - name: Permission checks (backend / frontend / constants / error codes)
+        run: cargo xtask check-perms
+
+      - name: OpenAPI contract is up to date
+        run: |
+          cargo xtask openapi
+          git diff --exit-code contracts/openapi.json \
+            || (echo "::error::contracts/openapi.json 与代码不一致，请本地执行 cargo xtask openapi 并提交" && exit 1)
+
+  # ---------------------------------------------------------------------------
+  # 集成：真库冒烟（含 RLS FORCE）
+  #
+  # 迁移里已经 FORCE ROW LEVEL SECURITY，这个 job 验证：
+  #   1. 全新库能从零跑完迁移 + seed + 菜单初始化
+  #   2. 登录 / 系统读写 / CRM CRUD / 文件上传全部正常
+  #   3. 没有租户上下文时，RLS 确实拦截（查询返回 0 行）
+  # ---------------------------------------------------------------------------
+  integration:
+    name: Integration (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: zcadmin
+          POSTGRES_PASSWORD: zcadmin
+          POSTGRES_DB: zcadmin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zcadmin -d zcadmin"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://zcadmin:zcadmin@127.0.0.1:5432/zcadmin
+      AUTH_DEV_PASSWORD: admin123456
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Smoke test (fresh database, RLS forced)
+        run: cargo test -p server --test smoke -- --ignored --nocapture
+
+      - name: Webhook retry test
+        run: cargo test -p server --test webhook_retry -- --ignored --nocapture
+
+      - name: Webhook delivery test
+        run: cargo test -p server --test webhook_delivery -- --ignored --nocapture
+
+      - name: Single session test
+        # 本文件含两个用例，且都操作同一个 admin 账号；并行会互相吊销会话。
+        run: cargo test -p server --test single_session -- --ignored --nocapture --test-threads=1
+
+      - name: Tenant isolation test (tenant admin is not platform super admin)
+        run: cargo test -p server --test tenant_isolation -- --ignored --nocapture
+
+      - name: Session and file transaction regression tests (isolated databases)
+        # sqlx::test 自动创建测试库，验证并发替换和提交失败补偿，不复用 smoke 的账号。
+        run: cargo test -p kernel --test session_atomicity --test file_atomicity --test user_import_atomicity -- --ignored --test-threads=1
+
+      - name: CRM import partial-success test (per-row SAVEPOINT)
+        run: cargo test -p server --test crm_import_partial -- --ignored --nocapture
+
+      - name: CSRF guard
+        run: cargo test -p server --test csrf_guard -- --ignored --nocapture
+
+      - name: Export task maintenance
+        run: cargo test -p server --test export_maintenance -- --ignored --nocapture
+
+      - name: Scope matrix test (all/dept/child/self/custom)
+        run: cargo test -p server --test scope_matrix -- --ignored --nocapture
+
+      - name: RBAC matrix test
+        run: cargo test -p server --test rbac_matrix -- --ignored --nocapture
+
+      - name: RBAC role login test
+        run: cargo test -p server --test rbac_role -- --ignored --nocapture
+
+      - name: Custom data scope integration test
+        run: cargo test -p server --test custom_scope -- --ignored --nocapture
+
+      - name: Performance baseline (informational)
+        run: cargo test -p server --test bench -- --ignored --nocapture
+
+      - name: Prepare non-superuser roles for RLS assertions
+        # 两条路径都要测，缺一不可：
+        #   rls_owner —— **表 owner**（NO SUPERUSER / NO BYPASSRLS），验证 FORCE 是否生效。
+        #                只有 owner 才能发现「只 ENABLE 未 FORCE」的缺口；
+        #                普通角色在 ENABLE-only 的表上也会被拦住，测试会假通过。
+        #   rls_probe —— 普通角色，验证策略对非 owner 同样生效。
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            t record;
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rls_probe') THEN
+              CREATE ROLE rls_probe LOGIN PASSWORD 'rls_probe' NOSUPERUSER NOBYPASSRLS;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rls_owner') THEN
+              CREATE ROLE rls_owner LOGIN PASSWORD 'rls_owner' NOSUPERUSER NOBYPASSRLS;
+            END IF;
+
+            -- 模拟生产里的「建表角色」：rls_owner 必须真的拥有表，
+            -- 否则 FORCE 与非 FORCE 行为一致，测试就失去意义。
+            -- ALTER SCHEMA OWNER 不会改变已有表，必须逐表转移。
+            FOR t IN
+              SELECT tablename FROM pg_tables WHERE schemaname = 'sys'
+            LOOP
+              EXECUTE format('ALTER TABLE sys.%I OWNER TO rls_owner', t.tablename);
+            END LOOP;
+            ALTER SCHEMA sys OWNER TO rls_owner;
+
+            GRANT USAGE ON SCHEMA sys TO rls_probe;
+            GRANT SELECT ON ALL TABLES IN SCHEMA sys TO rls_probe;
+            -- 之后新建的分区（测试期间可能创建）也要可读
+            ALTER DEFAULT PRIVILEGES IN SCHEMA sys GRANT SELECT ON TABLES TO rls_probe;
+          END $$;
+          SQL
+
+      - name: RLS assertions (owner path + plain-role path)
+        env:
+          RLS_OWNER_DATABASE_URL: postgres://rls_owner:rls_owner@127.0.0.1:5432/zcadmin
+          RLS_TEST_DATABASE_URL: postgres://rls_probe:rls_probe@127.0.0.1:5432/zcadmin
+        run: cargo test -p server --test rls_enforced -- --ignored --test-threads=1 --nocapture
+
+  # ---------------------------------------------------------------------------
+  # 前端：类型检查 / 构建
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (Vue)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # 文档与生成物一致性（防止 AI 改了代码忘了改文档/契约）
+  # ---------------------------------------------------------------------------
+  docs:
+    name: Docs sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Every plugin has CONTEXT.md
+        run: |
+          missing=0
+          for d in plugins/*/; do
+            if [ ! -f "$d/CONTEXT.md" ]; then
+              echo "::error::插件 $d 缺少 CONTEXT.md（AI 需要它理解领域）"
+              missing=1
+            fi
+          done
+          exit $missing
+
+  # ---------------------------------------------------------------------------
+  # Docker 镜像构建（本地环境没有 Docker 时，由 CI 负责真正构建）
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: docker build -t zcadmin:ci .
+
+      - name: Validate compose
+        run: docker compose config > /dev/null
+
+  # ---------------------------------------------------------------------------
+  # Flutter 移动端：本地无 Flutter SDK，由 CI 负责真实构建
+  # ---------------------------------------------------------------------------
+  mobile:
+    name: Flutter build (APK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android platform files
+        run: flutter create --platforms=android --project-name zcadmin_mobile .
+
+      - run: flutter pub get
+
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - run: flutter build apk --debug
+
+  # ---------------------------------------------------------------------------
+  # Tauri 桌面端：Windows runner 自带 MSVC + Windows SDK，可产出 MSI/NSIS
+  # ---------------------------------------------------------------------------
+  desktop:
+    name: Tauri desktop (Windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zcadmin-desktop
+          path: apps/desktop/src-tauri/target/release/bundle/**

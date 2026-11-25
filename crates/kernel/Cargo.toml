@@ -1,0 +1,36 @@
+[package]
+name = "kernel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "内核：插件契约、装配器与横切能力"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+# 显式声明 catch-panic / compression：企业级基线（panic 不放大成进程退出、JSON 带宽减半）。
+# 依赖版本仍在工作区统一管理，不新增第三方 crate。
+tower-http = { workspace = true, features = ["catch-panic", "compression-gzip"] }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_html_form = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+inventory = { workspace = true }
+toml = { workspace = true }
+argon2 = { workspace = true }
+sha2 = { workspace = true }
+hmac = { workspace = true }
+reqwest = { workspace = true }
+utoipa = { workspace = true }
+rust_xlsxwriter = { workspace = true }
+calamine = { workspace = true }
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }

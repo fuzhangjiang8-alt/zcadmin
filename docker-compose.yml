@@ -1,0 +1,97 @@
+# =============================================================================
+# 本地开发依赖（生产环境请使用独立部署的 PG / Redis / MinIO）
+#
+# 启动：docker compose up -d
+# 停止：docker compose down
+# 清空数据：docker compose down -v
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zcadmin-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zcadmin
+      POSTGRES_PASSWORD: zcadmin
+      POSTGRES_DB: zcadmin
+      # 中文排序与大小写不敏感检索的基础配置
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # 首次初始化时创建非超级用户的应用角色（否则 FORCE RLS 会被超级用户绕过）。
+      # 已有数据卷不会执行本脚本，需要 `docker compose down -v` 或手工建角色。
+      - ./ops/init-app-role.sql:/docker-entrypoint-initdb.d/10-app-role.sql:ro
+    healthcheck:
+      # 健康检查通过后，应用才应该启动（避免迁移时连不上库）
+      test: ["CMD-SHELL", "pg_isready -U zcadmin -d zcadmin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "log_min_duration_statement=500ms"   # 慢查询日志阈值：500ms
+
+  # ---------------------------------------------------------------------------
+  # 以下为可选依赖，M0 不强制启动。需要时取消注释。
+  # ---------------------------------------------------------------------------
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: zcadmin-redis
+  #   ports: ["6379:6379"]
+  #   command: ["redis-server", "--appendonly", "yes"]
+
+  # minio:
+  #   image: minio/minio
+  #   container_name: zcadmin-minio
+  #   environment:
+  #     MINIO_ROOT_USER: minioadmin
+  #     MINIO_ROOT_PASSWORD: minioadmin
+  #   ports: ["9000:9000", "9001:9001"]
+  #   command: server /data --console-address ":9001"
+  #   volumes:
+  #     - miniodata:/data
+
+  # ---------------------------------------------------------------------------
+  # 应用（单体：Rust API + 内嵌 Vue 前端）
+  # ---------------------------------------------------------------------------
+  app:
+    build: .
+    image: zcadmin:0.1.0
+    container_name: zcadmin-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # 应用使用 NOBYPASSRLS 角色连接；zcadmin（超级用户）只用于初始化/运维。
+      DATABASE_URL: postgres://zcadmin_app:zcadmin_app@postgres:5432/zcadmin
+      BIND_ADDR: 0.0.0.0:8080
+      WEB_DIST: /app/web
+      AUTH_DEV_PASSWORD: ${AUTH_DEV_PASSWORD:-admin123456}
+      RUST_LOG: info
+      # 生产必须改成 JSON 便于采集；本地调试可删掉
+      LOG_FORMAT: json
+    ports:
+      - "8080:8080"
+    volumes:
+      - filedata:/app/data
+    healthcheck:
+      test: ["CMD", "/app/server", "--healthcheck"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    # SIGTERM 后给应用 40 秒排空（应用内部上限 20s + 摘流缓冲），
+    # 超时才 SIGKILL。默认 10s 会在一半请求还没处理完时强杀。
+    stop_grace_period: 40s
+
+volumes:
+  pgdata:
+  filedata:
+  # miniodata:

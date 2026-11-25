@@ -1,0 +1,52 @@
+# =============================================================================
+# CRM 回款（payment）
+# 用法：cargo xtask gen schema/crm/payment.toml
+# =============================================================================
+
+[entity]
+plugin = "crm"
+table = "payment"
+name = "回款"
+route = "/payments"
+owner_field = "owner_id"
+dept_field = "dept_id"
+
+[[field]]
+name = "contract_id"
+type = "uuid"
+required = true
+list = true
+
+[[field]]
+name = "payment_no"
+type = "string"
+length = 64
+required = true
+list = true
+search = "ct"
+
+[[field]]
+name = "amount_cents"
+type = "int"
+required = true
+list = true
+
+[[field]]
+name = "paid_at"
+type = "datetime"
+
+[[field]]
+name = "method"
+type = "string"
+length = 32
+
+[[field]]
+name = "owner_id"
+type = "uuid"
+required = true
+auto = true
+
+[[field]]
+name = "dept_id"
+type = "uuid"
+auto = true

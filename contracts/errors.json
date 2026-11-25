@@ -1,0 +1,63 @@
+{
+  "$comment": "错误码唯一来源。新增错误码只允许追加，不允许修改既有语义。CI 执行 scripts/check-error-codes.mjs 校验后端 AppError::code() 与本文件一致。",
+  "sys.validation.invalid": {
+    "http": 422,
+    "zh-CN": "参数校验失败",
+    "en-US": "Validation failed",
+    "action": "检查表单字段后重试"
+  },
+  "sys.auth.unauthorized": {
+    "http": 401,
+    "zh-CN": "未登录或会话已过期",
+    "en-US": "Unauthorized",
+    "action": "跳转登录页"
+  },
+  "sys.auth.forbidden": {
+    "http": 403,
+    "zh-CN": "没有权限执行该操作",
+    "en-US": "Forbidden",
+    "action": "联系管理员分配权限"
+  },
+  "sys.resource.not_found": {
+    "http": 404,
+    "zh-CN": "资源不存在",
+    "en-US": "Not found",
+    "action": "刷新列表后重试"
+  },
+  "sys.resource.conflict": {
+    "http": 409,
+    "zh-CN": "资源冲突",
+    "en-US": "Conflict",
+    "action": "刷新后重试"
+  },
+  "sys.rate_limit.exceeded": {
+    "http": 429,
+    "zh-CN": "请求过于频繁",
+    "en-US": "Too many requests",
+    "action": "按 Retry-After 退避后重试"
+  },
+  "sys.internal.unavailable": {
+    "http": 503,
+    "zh-CN": "服务繁忙，请稍后重试",
+    "en-US": "Service unavailable",
+    "action": "按 Retry-After 退避后重试；持续出现请联系管理员"
+  },
+  "sys.internal.database": {
+    "http": 500,
+    "zh-CN": "系统繁忙，请稍后重试",
+    "en-US": "Internal error",
+    "action": "联系管理员并提供 traceId"
+  },
+  "sys.internal.unexpected": {
+    "http": 500,
+    "zh-CN": "系统异常",
+    "en-US": "Unexpected error",
+    "action": "联系管理员并提供 traceId"
+  },
+  "demo.item.not_found": {
+    "http": 404,
+    "zh-CN": "示例数据不存在",
+    "en-US": "Demo item not found",
+    "action": "刷新列表"
+  }
+}

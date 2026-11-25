@@ -1,0 +1,57 @@
+# =============================================================================
+# 示例 schema：CRM 联系人
+#
+# 用法：cargo xtask gen schema/crm/contact.toml
+# 生成后会打印需要手动添加的两行（mod + merge）。
+# =============================================================================
+
+[entity]
+plugin = "crm"          # 所属插件（决定目录与 schema）
+table = "contact"       # 表名
+name = "联系人"          # 中文名
+route = "/contacts"     # 路由片段（挂在 /api/crm 下）
+owner_field = "owner_id" # 数据权限：负责人字段
+dept_field = "dept_id"   # 数据权限：部门字段
+
+[[field]]
+name = "customer_id"
+type = "uuid"
+required = true
+list = true
+
+[[field]]
+name = "name"
+type = "string"
+length = 64
+required = true
+list = true
+search = "ct"           # 支持关键字模糊搜索
+
+[[field]]
+name = "phone"
+type = "string"
+length = 32
+list = true
+
+[[field]]
+name = "email"
+type = "string"
+length = 128
+
+[[field]]
+name = "is_primary"
+type = "bool"
+required = true
+list = true
+
+# 系统托管字段：不出现在请求体，由服务端按当前用户赋值
+[[field]]
+name = "owner_id"
+type = "uuid"
+required = true
+auto = true
+
+[[field]]
+name = "dept_id"
+type = "uuid"
+auto = true

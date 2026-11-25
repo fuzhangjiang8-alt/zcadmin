@@ -1,0 +1,20 @@
+[package]
+name = "plugin-demo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "示例插件：演示插件契约、独立 schema 与标准 CRUD 写法"
+
+[dependencies]
+kernel = { workspace = true }
+axum = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+inventory = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+utoipa = { workspace = true }

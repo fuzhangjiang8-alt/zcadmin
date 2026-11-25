@@ -1,0 +1,63 @@
+# =============================================================================
+# CRM 合同（contract）
+# 用法：cargo xtask gen schema/crm/contract.toml
+# =============================================================================
+
+[entity]
+plugin = "crm"
+table = "contract"
+name = "合同"
+route = "/contracts"
+owner_field = "owner_id"
+dept_field = "dept_id"
+
+[[field]]
+name = "customer_id"
+type = "uuid"
+required = true
+list = true
+
+[[field]]
+name = "contract_no"
+type = "string"
+length = 64
+required = true
+list = true
+search = "ct"
+
+[[field]]
+name = "name"
+type = "string"
+length = 128
+required = true
+list = true
+search = "ct"
+
+# 金额用分存整数
+[[field]]
+name = "amount_cents"
+type = "int"
+required = true
+list = true
+
+[[field]]
+name = "status"
+type = "string"
+length = 32
+required = true
+list = true
+
+[[field]]
+name = "signed_at"
+type = "datetime"
+
+[[field]]
+name = "owner_id"
+type = "uuid"
+required = true
+auto = true
+
+[[field]]
+name = "dept_id"
+type = "uuid"
+auto = true

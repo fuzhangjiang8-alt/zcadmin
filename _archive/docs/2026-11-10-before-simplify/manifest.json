@@ -1,0 +1,92 @@
+[
+    {
+        "path":  "README.md",
+        "bytes":  20987,
+        "lines":  384,
+        "sha256":  "C8E53B4E6788D58D3D261BEFAEE8AEF14CC47859BCB31DC586A72FF7DBC6CAF0"
+    },
+    {
+        "path":  "RUST-新手导览.md",
+        "bytes":  7143,
+        "lines":  139,
+        "sha256":  "77559DDAF774801462A844C29AEE0AD748E019FC347FFBA652D5A431C7EFDCFB"
+    },
+    {
+        "path":  "docs/01-后端架构.md",
+        "bytes":  40413,
+        "lines":  953,
+        "sha256":  "045C873543A89D29DA6116FBF97A432378F0E21CD51A28106D66328B83A9662C"
+    },
+    {
+        "path":  "docs/02-前端架构.md",
+        "bytes":  31988,
+        "lines":  716,
+        "sha256":  "1C0EBE5BD6C38A02CAC172B55B77A612A970ED78B0B3B5D08175303E4ED3FB37"
+    },
+    {
+        "path":  "docs/03-数据架构.md",
+        "bytes":  29345,
+        "lines":  734,
+        "sha256":  "141FB6E63DEA7271E3040F444CFCC9C288B11A7CBB4E21E0B354C664B72DC8DD"
+    },
+    {
+        "path":  "docs/04-插件体系.md",
+        "bytes":  20526,
+        "lines":  560,
+        "sha256":  "5655D365427EB39C28DF85A1C36D9A1BC317E29FCDC9ABA14EA204CC9B9AC10E"
+    },
+    {
+        "path":  "docs/05-安全合规与运维.md",
+        "bytes":  58808,
+        "lines":  1457,
+        "sha256":  "AC8EE3BFAB86EC1C3010BD53521D15A5EC4EF72663387A562FAA40F23F0B031E"
+    },
+    {
+        "path":  "docs/06-平台化演进（中台+多产品）.md",
+        "bytes":  22996,
+        "lines":  440,
+        "sha256":  "E56AC65CD58A1B64D0DCDC94FD7C4F8346C30DC81BB5D83CA32AC3F025C1AA34"
+    },
+    {
+        "path":  "docs/07-AI原生开发与持续迭代.md",
+        "bytes":  21795,
+        "lines":  590,
+        "sha256":  "EA076454CE60B87A10BFF5FCF4C0B8F8F69934649BE29548C9FFF94E34215A8A"
+    },
+    {
+        "path":  "docs/08-多端架构（Web+Tauri+Flutter）.md",
+        "bytes":  16530,
+        "lines":  423,
+        "sha256":  "40E44B600A8DA538C41363CB5FC3972CF96161442369559220965BE6C9E439B5"
+    },
+    {
+        "path":  "docs/09-注释与文档规范.md",
+        "bytes":  7995,
+        "lines":  242,
+        "sha256":  "0EA38CE4D9F85711433149B4089EE403713C147877387E2D0CFC53125323DB26"
+    },
+    {
+        "path":  "docs/10-后端代码地图.md",
+        "bytes":  35523,
+        "lines":  687,
+        "sha256":  "559F0A8D1E19BC5061A3FEDF4ED4D714718F0A601AE52432E42EC83A036A0844"
+    },
+    {
+        "path":  "docs/ci-local-rehearsal.md",
+        "bytes":  5548,
+        "lines":  115,
+        "sha256":  "DDF32A1473DCC6C46E99EAF7A8F70B0E002F842091771462CBF4EB82B863013D"
+    },
+    {
+        "path":  "docs/企业级管理后台-架构设计.md",
+        "bytes":  22902,
+        "lines":  323,
+        "sha256":  "C24682566DAA21646C50DA2FC36100E2030FB46595DAAB23C2F7966098AD33CC"
+    },
+    {
+        "path":  "docs/基础功能分析与加固-2026-11-10.md",
+        "bytes":  10097,
+        "lines":  118,
+        "sha256":  "4ACCBF2CA1DA5E14F7AAD1E2FDC34296F22855DCBD3B6AC30D1610162C50C632"
+    }
+]

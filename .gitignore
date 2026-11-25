@@ -1,0 +1,44 @@
+# ---- Rust ----
+target/
+**/*.rs.bk
+
+# ---- 前端 ----
+node_modules/
+dist/
+.pnpm-store/
+*.local
+
+# ---- 环境与密钥（绝不入库）----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- 编辑器 ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# ---- 运行时数据（本地文件存储）----
+data/
+
+# ---- 日志与临时文件 ----
+*.log
+logs/
+tmp/
+
+# ---- sqlx 离线缓存（有意入库，见下）----
+# .sqlx/ 需要提交，保证 CI 无数据库也能编译。
+# 这里显式不忽略，仅作说明。
+
+# ---- 多端构建产物 ----
+apps/desktop/node_modules/
+apps/desktop/src-tauri/target/
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins*
+
+# ---- 本地运行日志与会话临时产物（另一项目误输出于此，不入库）----
+.run-logs/

@@ -1,0 +1,11 @@
+# 构建上下文裁剪：镜像构建不需要这些（体积从 GB 降到 MB 级）
+target
+**/node_modules
+frontend/dist
+data
+.git
+.github
+docs
+*.md
+*.png
+*.log
